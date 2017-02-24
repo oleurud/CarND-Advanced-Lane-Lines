@@ -21,10 +21,10 @@ def preprocessColor(image):
 
     S = preprocessColorS(image)
     threshold = preprocessColorThreshold(image)
-
+    
     combined_binary = np.zeros_like(S)
     combined_binary[(threshold == 1) | (S == 1)] = 1
-
+    
     return combined_binary
 
 
@@ -64,7 +64,7 @@ def preprocessColorThreshold(image):
     """
     Returns the combined threshold of directional gradient, gradient magnitude and gradient direction
     """
-    
+
     ksize = 3
 
     gradx = abs_sobel_thresh(image, orient='x', thresh_min=20, thresh_max=100)
@@ -120,6 +120,14 @@ def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
     return binary_output
 
 
+def drawPolygon(image):
+    corners = np.int32(getCornersOfView())
+    corners = corners.reshape((-1,1,2))
+
+    cv2.polylines(image, [corners], True, (255,0,0), 2)
+
+    return image
+
 
 def undistort(image, calibrationFilePath):
     """
@@ -145,7 +153,7 @@ def getPerspectiveTransformMatrix():
     Returns the perspective transform matrix for perspectiveTransform
     """
 
-    corners = np.float32([[253, 697], [585, 456], [700, 456], [1061, 690]])
+    corners = np.float32(getCornersOfView())
     new_top_left = np.array([corners[0, 0], 0])
     new_top_right = np.array([corners[3, 0], 0])
     offset = [50, 0]
@@ -155,3 +163,6 @@ def getPerspectiveTransformMatrix():
 
     return cv2.getPerspectiveTransform(src, dst)
 
+
+def getCornersOfView():
+    return [[220, 690], [580, 456], [700, 456], [1060, 690]]
