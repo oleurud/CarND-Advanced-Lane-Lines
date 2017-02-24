@@ -7,6 +7,13 @@ import cv2
 import numpy as np
 
 def preprocessColor(image):
+    """
+    Returns processed image color
+    Process:
+        - Get the image binary of the channel S of the HLS image 
+        - Get the combined threshold of directional gradient, gradient magnitude and gradient direction
+        - Combined both
+    """
     #return preprocessColorGray(image)
     #return preprocessColorR(image)
     #return preprocessColorS(image)
@@ -22,6 +29,9 @@ def preprocessColor(image):
 
 
 def preprocessColorGray(image):
+    """
+    Returns the binary of the gray image
+    """
     thresh = (180, 255)
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     binary = np.zeros_like(gray)
@@ -29,6 +39,9 @@ def preprocessColorGray(image):
     return binary
 
 def preprocessColorR(image):
+    """
+    Returns the binary of the channel R of the RGB image
+    """
     R = image[:,:,0]
     thresh = (200, 255)
     binary = np.zeros_like(R)
@@ -36,6 +49,9 @@ def preprocessColorR(image):
     return binary    
 
 def preprocessColorS(image):
+    """
+    Returns the binary of the channel S of the HLS image
+    """
     hls = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
     S = hls[:,:,2]
     thresh = (90, 255)
@@ -45,6 +61,10 @@ def preprocessColorS(image):
 
 
 def preprocessColorThreshold(image):
+    """
+    Returns the combined threshold of directional gradient, gradient magnitude and gradient direction
+    """
+    
     ksize = 3
 
     gradx = abs_sobel_thresh(image, orient='x', thresh_min=20, thresh_max=100)
@@ -57,54 +77,46 @@ def preprocessColorThreshold(image):
 
 
 def abs_sobel_thresh(image, orient='x', sobel_kernel=3, thresh_min=0, thresh_max=255):
-    
-    # Apply the following steps to img
-    # 1) Convert to grayscale
+    """
+    Returns binary directional gradient of image
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    # 2) Take the derivative in x or y given orient = 'x' or 'y'
-    # 3) Take the absolute value of the derivative or gradient
     if orient == 'x':
         abs_sobel = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 1, 0))
     if orient == 'y':
         abs_sobel = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 0, 1))
-    # 4) Scale to 8-bit (0 - 255) then convert to type = np.uint8
     scaled_sobel = np.uint8(255*abs_sobel/np.max(abs_sobel))
-    # 5) Create a mask of 1's where the scaled gradient magnitude 
-            # is > thresh_min and < thresh_max
     sxbinary = np.zeros_like(scaled_sobel)
     sxbinary[(scaled_sobel >= thresh_min) & (scaled_sobel <= thresh_max)] = 1
-    # 6) Return this mask as your binary_output image
+    
     return sxbinary
 
 def mag_thresh(image, sobel_kernel=3, mag_thresh=(0, 255)):
-    # Convert to grayscale
+    """
+    Returns binary gradient magnitude of image
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    # Take both Sobel x and y gradients
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel)
-    # Calculate the gradient magnitude
     gradmag = np.sqrt(sobelx**2 + sobely**2)
-    # Rescale to 8 bit
     scale_factor = np.max(gradmag)/255 
     gradmag = (gradmag/scale_factor).astype(np.uint8) 
-    # Create a binary image of ones where threshold is met, zeros otherwise
     binary_output = np.zeros_like(gradmag)
     binary_output[(gradmag >= mag_thresh[0]) & (gradmag <= mag_thresh[1])] = 1
-    
+
     return binary_output
     
 def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
-    
+    """
+    Returns binary gradient direction of image
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    # Calculate the x and y gradients
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel)
-    # Take the absolute value of the gradient direction, 
-    # apply a threshold, and create a binary image result
     absgraddir = np.arctan2(np.absolute(sobely), np.absolute(sobelx))
     binary_output =  np.zeros_like(absgraddir)
     binary_output[(absgraddir >= thresh[0]) & (absgraddir <= thresh[1])] = 1
-    
+
     return binary_output
 
 
