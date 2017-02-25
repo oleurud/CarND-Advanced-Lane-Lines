@@ -121,6 +121,9 @@ def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
 
 
 def drawPolygon(image):
+    #draw the lines in a new image
+    image = np.copy(image)
+    
     corners = np.int32(getCornersOfView())
     corners = corners.reshape((-1,1,2))
 
@@ -165,4 +168,4 @@ def getPerspectiveTransformMatrix():
 
 
 def getCornersOfView():
-    return [[220, 690], [580, 456], [700, 456], [1060, 690]]
+    return [[253, 697], [585, 456], [700, 456], [1061, 690]]
