@@ -167,5 +167,21 @@ def getPerspectiveTransformMatrix():
     return cv2.getPerspectiveTransform(src, dst)
 
 
+def getInversePerspectiveTransformMatrix():
+    """
+    Returns the perspective transform matrix for perspectiveTransform
+    """
+
+    corners = np.float32(getCornersOfView())
+    new_top_left = np.array([corners[0, 0], 0])
+    new_top_right = np.array([corners[3, 0], 0])
+    offset = [50, 0]
+
+    src = np.float32([corners[0], corners[1], corners[2], corners[3]])
+    dst = np.float32([corners[0] + offset, new_top_left + offset, new_top_right - offset, corners[3] - offset])
+
+    return cv2.getPerspectiveTransform(dst, src)
+
+
 def getCornersOfView():
-    return [[253, 697], [585, 456], [700, 456], [1061, 690]]
+    return [[240, 697], [585, 456], [700, 456], [1090, 690]]

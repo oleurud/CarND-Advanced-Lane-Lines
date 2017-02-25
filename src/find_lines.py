@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def fullSearch(binary_warped):
     # Take a histogram of the bottom half of the image
-    histogram = np.sum(binary_warped[binary_warped.shape[0]/2:,:], axis=0)
+    histogram = np.sum(binary_warped[binary_warped.shape[0]/2:, :], axis=0)
 
     # Find the left and right lines
     midpoint = np.int(histogram.shape[0]/2)
@@ -46,14 +46,14 @@ def fullSearch(binary_warped):
 
         """
         # Draw the windows on the visualization image
-        cv2.rectangle(out_img,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2) 
-        cv2.rectangle(out_img,(win_xright_low,win_y_low),(win_xright_high,win_y_high),(0,255,0), 2) 
+        cv2.rectangle(out_img,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
+        cv2.rectangle(out_img,(win_xright_low,win_y_low),(win_xright_high,win_y_high),(0,255,0), 2)
         """
-        
+
         # Identify the nonzero pixels in x and y within the window
         good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
         good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xright_low) & (nonzerox < win_xright_high)).nonzero()[0]
-        
+
         # Save these indices to the lists
         left_lane_inds.append(good_left_inds)
         right_lane_inds.append(good_right_inds)
@@ -69,7 +69,7 @@ def fullSearch(binary_warped):
     left_lane_inds = np.concatenate(left_lane_inds)
     right_lane_inds = np.concatenate(right_lane_inds)
 
-    return processSeach(left_lane_inds, right_lane_inds, nonzerox, nonzeroy)
+    return processSeach(binary_warped, left_lane_inds, right_lane_inds, nonzerox, nonzeroy)
 
 
 def searchFromFoundLines(binary_warped, left_fit, right_fit):
@@ -81,32 +81,40 @@ def searchFromFoundLines(binary_warped, left_fit, right_fit):
     margin = 100
     left_lane_inds = ((nonzerox > (left_fit[0]*(nonzeroy**2) + left_fit[1]*nonzeroy + left_fit[2] - margin)) & (nonzerox < (left_fit[0]*(nonzeroy**2) + left_fit[1]*nonzeroy + left_fit[2] + margin)))
     right_lane_inds = ((nonzerox > (right_fit[0]*(nonzeroy**2) + right_fit[1]*nonzeroy + right_fit[2] - margin)) & (nonzerox < (right_fit[0]*(nonzeroy**2) + right_fit[1]*nonzeroy + right_fit[2] + margin)))
-    
-    return processSeach(left_lane_inds, right_lane_inds, nonzerox, nonzeroy)
+
+    return processSeach(binary_warped, left_lane_inds, right_lane_inds, nonzerox, nonzeroy)
 
 
-def processSeach(left_lane_inds, right_lane_inds, nonzerox, nonzeroy):
+def processSeach(binary_warped, left_lane_inds, right_lane_inds, nonzerox, nonzeroy):
      # Extract left and right line pixel positions
     leftx = nonzerox[left_lane_inds]
-    lefty = nonzeroy[left_lane_inds] 
+    lefty = nonzeroy[left_lane_inds]
     rightx = nonzerox[right_lane_inds]
-    righty = nonzeroy[right_lane_inds] 
+    righty = nonzeroy[right_lane_inds]
 
-    # Fit a second order polynomial to each
+    # Fit a second order polynomial
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
 
-    return left_lane_inds, right_lane_inds, left_fit, right_fit, nonzerox, nonzeroy
-
-
-def saveFileOfFoundLines(binary_warped, left_lane_inds, right_lane_inds, left_fit, right_fit, nonzerox, nonzeroy, filePath):
-    # Create an output image to draw on and visualize the result
-    out_img = np.dstack((binary_warped, binary_warped, binary_warped))*255
-
-    # Generate x and y values for plotting
     ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0])
+    # values in x axis for each pixel
     left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
     right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
+
+    return {'left_lane_inds': left_lane_inds,
+            'right_lane_inds': right_lane_inds,
+            'left_fit': left_fit,
+            'right_fit': right_fit,
+            'nonzerox': nonzerox,
+            'nonzeroy': nonzeroy,
+            'ploty': ploty,
+            'left_fitx': left_fitx,
+            'right_fitx': right_fitx}
+
+
+def saveFileOfFoundLines(binary_warped, left_lane_inds, right_lane_inds, nonzerox, nonzeroy, ploty, left_fitx, right_fitx, filePath):
+    # Create an output image to draw on and visualize the result
+    out_img = np.dstack((binary_warped, binary_warped, binary_warped))*255
 
     # colors
     out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
@@ -120,3 +128,49 @@ def saveFileOfFoundLines(binary_warped, left_lane_inds, right_lane_inds, left_fi
     plt.ylim(720, 0)
     plt.savefig(filePath)
     plt.close()
+
+
+def drawResult(warped, left_fitx, right_fitx, ploty, Minv, undist):
+    # Create an image to draw the lines on
+    warp_zero = np.zeros_like(warped).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
+
+    # Warp the blank back to original image space using inverse perspective matrix (Minv)
+    newwarp = cv2.warpPerspective(color_warp, Minv, (warped.shape[1], warped.shape[0])) 
+    # Combine the result with the original image
+    return cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+
+
+# meters per pixel in y dimension
+ym_per_pix = 30/720 
+# meters per pixel in x dimension
+xm_per_pix = 3.7/700 
+
+def getLinesCurvature(ploty, leftx, rightx):
+    leftx = leftx[::-1]  # Reverse to match top-to-bottom in y
+    rightx = rightx[::-1]  # Reverse to match top-to-bottom in y
+
+    y_max = np.max(ploty)
+
+    # Fit new polynomials to x,y in world space
+    left_fit_cr = np.polyfit(ploty*ym_per_pix, leftx*xm_per_pix, 2)
+    right_fit_cr = np.polyfit(ploty*ym_per_pix, rightx*xm_per_pix, 2)
+
+    # Calculate the curvature in meters
+    left_curvature = ((1 + (2*left_fit_cr[0]*y_max*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
+    right_curvature = ((1 + (2*right_fit_cr[0]*y_max*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
+
+    return left_curvature, right_curvature
+
+
+def getDistanceFromCenter(x_max, left_fitx, right_fitx):
+    center = (left_fitx[0] + right_fitx[0]) / 2.0
+    return (center - x_max / 2.0) * xm_per_pix
