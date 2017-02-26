@@ -21,10 +21,9 @@ def preprocessColor(image):
 
     S = preprocessColorS(image)
     threshold = preprocessColorThreshold(image)
-    
+
     combined_binary = np.zeros_like(S)
     combined_binary[(threshold == 1) | (S == 1)] = 1
-    
     return combined_binary
 
 
@@ -120,11 +119,18 @@ def dir_threshold(image, sobel_kernel=3, thresh=(0, np.pi/2)):
     return binary_output
 
 
-def drawPolygon(image):
+def drawPolygon(image, transformed=False):
+    """
+    Returns the image with the perspective transform polygon drawn
+    """
     #draw the lines in a new image
     image = np.copy(image)
-    
-    corners = np.int32(getCornersOfView())
+
+    corners = getCornersOfView(image)
+    if transformed is False:
+        corners = np.int32(corners['src'])
+    else:
+        corners = np.int32(corners['dst'])
     corners = corners.reshape((-1,1,2))
 
     cv2.polylines(image, [corners], True, (255,0,0), 2)
@@ -146,42 +152,63 @@ def perspectiveTransform(undistortImage, xCorners, yCorners):
     returns image to a top-down view
     """
 
-    M = getPerspectiveTransformMatrix()
+    M = getPerspectiveTransformMatrix(undistortImage)
     img_size = (undistortImage.shape[1], undistortImage.shape[0])
     return cv2.warpPerspective(undistortImage, M, img_size)
 
 
-def getPerspectiveTransformMatrix():
+def getPerspectiveTransformMatrix(undistortImage):
     """
     Returns the perspective transform matrix for perspectiveTransform
     """
 
-    corners = np.float32(getCornersOfView())
-    new_top_left = np.array([corners[0, 0], 0])
-    new_top_right = np.array([corners[3, 0], 0])
-    offset = [50, 0]
-
-    src = np.float32([corners[0], corners[1], corners[2], corners[3]])
-    dst = np.float32([corners[0] + offset, new_top_left + offset, new_top_right - offset, corners[3] - offset])
+    corners = getCornersOfView(undistortImage)
+    src = np.float32(corners['src'])
+    dst = np.float32(corners['dst'])
 
     return cv2.getPerspectiveTransform(src, dst)
 
 
-def getInversePerspectiveTransformMatrix():
+def getInversePerspectiveTransformMatrix(undistortImage):
     """
     Returns the perspective transform matrix for perspectiveTransform
     """
 
-    corners = np.float32(getCornersOfView())
-    new_top_left = np.array([corners[0, 0], 0])
-    new_top_right = np.array([corners[3, 0], 0])
-    offset = [50, 0]
-
-    src = np.float32([corners[0], corners[1], corners[2], corners[3]])
-    dst = np.float32([corners[0] + offset, new_top_left + offset, new_top_right - offset, corners[3] - offset])
+    corners = getCornersOfView(undistortImage)
+    src = np.float32(corners['src'])
+    dst = np.float32(corners['dst'])
 
     return cv2.getPerspectiveTransform(dst, src)
 
 
-def getCornersOfView():
-    return [[240, 697], [585, 456], [700, 456], [1090, 690]]
+def getCornersOfView(undistortImage):
+    """
+    Returns the poinst for perspective transform
+    """
+    xsize = undistortImage.shape[1]
+    ysize = undistortImage.shape[0]
+
+    xmid = xsize/2
+    upper_margin = 85
+    lower_margin = 480
+    upper_bound = 460
+    lower_bound = 690
+    dst_margin = 450
+
+    # src corners
+    src = [
+        [xmid - lower_margin, lower_bound],
+        [xmid - upper_margin, upper_bound],
+        [xmid + upper_margin, upper_bound],
+        [xmid + lower_margin,lower_bound]
+    ]
+
+    # dst corners
+    dst = [
+        [xmid - dst_margin, ysize],
+        [xmid - dst_margin, 0],
+        [xmid + dst_margin, 0],
+        [xmid + dst_margin, ysize]
+    ]
+
+    return {'src': src, 'dst': dst}
