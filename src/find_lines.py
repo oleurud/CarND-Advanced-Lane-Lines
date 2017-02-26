@@ -130,7 +130,7 @@ def saveFileOfFoundLines(binary_warped, left_lane_inds, right_lane_inds, nonzero
     plt.close()
 
 
-def drawResult(warped, left_fitx, right_fitx, ploty, Minv, undist):
+def drawResult(warped, left_fitx, right_fitx, ploty, Minv, undist, left_curvature, right_curvature, distance_from_center):
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(warped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
@@ -146,7 +146,27 @@ def drawResult(warped, left_fitx, right_fitx, ploty, Minv, undist):
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
     newwarp = cv2.warpPerspective(color_warp, Minv, (warped.shape[1], warped.shape[0])) 
     # Combine the result with the original image
-    return cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+    image_result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+
+    # add the texts
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    meanCurvature = (left_curvature + right_curvature) / 2
+    curvature = 'Curvature: {:.0f}m '.format(meanCurvature)
+    cv2.putText(image_result, curvature, (100, 50), font, 1, (255, 255, 255), 2)
+
+    if distance_from_center > 0:
+        distance = 'Vehicle is {:.2f}m left of center '.format(distance_from_center)
+    elif distance_from_center <= 0:
+        distance = 'Vehicle is {:.2f}m right of center '.format(distance_from_center)
+    cv2.putText(image_result, distance, (100, 90), font, 1, (255, 255, 255), 2)
+
+    """
+    plt.imshow(image_result)
+    plt.savefig('output_images/result.jpg')
+    plt.close()
+    """
+
+    return image_result
 
 
 # meters per pixel in y dimension

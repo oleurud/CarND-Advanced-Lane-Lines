@@ -31,8 +31,6 @@ def processImage(image):
     # detect lines
     if validationInstance.processFromScratch() is True:
         linesData = find_lines.fullSearch(transformedImage)
-        validationInstance.setLeftFit(linesData['left_fit'])
-        validationInstance.setRightFit(linesData['right_fit'])
     else:
         linesData = find_lines.searchFromFoundLines(transformedImage, validationInstance.getLeftFit(), validationInstance.getRightFit())
 
@@ -62,7 +60,13 @@ def processImage(image):
     print('distance', distance_from_center)
     """
 
-    validationInstance.validateImageResult(left_curvature, right_curvature)
+    # validate result of this frame
+    frameValidation = validationInstance.validateImageResult(left_curvature, right_curvature)
+    if frameValidation is True:
+        # if ok, save the lines data. If not, we will use the last correct data in the next frame
+        validationInstance.setLeftFit(linesData['left_fit'])
+        validationInstance.setRightFit(linesData['right_fit'])
+
 
     # output image
     return find_lines.drawResult(
@@ -71,7 +75,11 @@ def processImage(image):
         linesData['right_fitx'],
         linesData['ploty'],
         process_image.getInversePerspectiveTransformMatrix(),
-        undistort)
+        undistort,
+        left_curvature,
+        right_curvature,
+        distance_from_center)
+
 
 
 def runTest():
@@ -89,9 +97,10 @@ def runTest():
 
 
 def runVideo():
-    output_file = './challenge_video_result.mp4'
-    input_file = './challenge_video.mp4'
-    print(os.path.isfile(input_file))
+    #output_file = './challenge_video_result.mp4'
+    #input_file = './challenge_video.mp4'
+    output_file = './project_video_result.mp4'
+    input_file = './project_video.mp4'
     clip = VideoFileClip(input_file)
     out_clip = clip.fl_image(processImage)
     out_clip.write_videofile(output_file, audio=False)

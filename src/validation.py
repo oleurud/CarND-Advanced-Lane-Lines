@@ -7,7 +7,7 @@ import numpy as np
 class Validation:
     def __init__(self):
         # max errors
-        self.maxErrors = 3
+        self.maxErrors = 2
         # current errors. Starts in the maximun to force the full search for the first image
         self.nErrors = self.maxErrors
 
@@ -19,8 +19,10 @@ class Validation:
         curvatureDifferential = 7.5
         if left_curvature * curvatureDifferential < right_curvature or left_curvature > right_curvature * curvatureDifferential:
             self.nErrors = self.nErrors + 1
+            return False
         else:
             self.nErrors = 0
+            return True
 
 
     def processFromScratch(self):
